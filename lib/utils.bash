@@ -1,14 +1,37 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: AGPL-3.0-or-later
+# Plugin for pollen
 set -euo pipefail
-readonly REPO="mbutterick/pollen"
-export TOOL_NAME="pollen" TOOL_CMD="pollen"
-log_info() { echo "[asdf-pollen] $*" >&2; }
-fail() { echo "[asdf-pollen] ERROR: $*" >&2; exit 1; }
-get_platform() { case "$(uname -s)" in Linux*) echo "linux" ;; Darwin*) echo "darwin" ;; *) fail "Unsupported" ;; esac; }
-get_arch() { case "$(uname -m)" in x86_64) echo "amd64" ;; aarch64|arm64) echo "arm64" ;; *) fail "Unsupported" ;; esac; }
-curl_wrapper() { curl --silent --fail --location --retry 3 ${GITHUB_TOKEN:+--header "Authorization: token ${GITHUB_TOKEN}"} "$@"; }
-download_file() { curl --fail --location --retry 3 -o "$2" ${GITHUB_TOKEN:+--header "Authorization: token ${GITHUB_TOKEN}"} "$1"; }
-list_all_versions() { curl_wrapper "https://api.github.com/repos/${REPO}/releases?per_page=100" | grep -oE '"tag_name":\s*"v?[0-9]+\.[0-9]+\.[0-9]+"' | sed 's/"tag_name":\s*"v\?\([^"]*\)"/\1/' | sort -t. -k1,1n -k2,2n -k3,3n | tr '\n' ' '; }
-get_latest_stable() { list_all_versions | tr ' ' '\n' | tail -1; }
-check_dependencies() { command -v curl &>/dev/null || fail "curl required"; }
+
+TOOL_NAME="pollen"
+
+fail() {
+  echo -e "\e[31mFail:\e[m $*" >&2
+  exit 1
+}
+
+list_all_versions() {
+  # Meta plugin - return placeholder version
+  echo "1.0.0"
+}
+
+download_release() {
+  local version="$1"
+  local download_path="$2"
+  # Meta plugin - nothing to download
+  mkdir -p "$download_path"
+  echo "$version" > "$download_path/VERSION"
+}
+
+install_version() {
+  local version="$1"
+  local install_path="$2"
+  mkdir -p "$install_path/bin"
+  echo "$version" > "$install_path/VERSION"
+  # Create placeholder script
+  cat > "$install_path/bin/$TOOL_NAME" << 'SCRIPT'
+#!/usr/bin/env bash
+echo "$TOOL_NAME meta plugin v$(cat "$(dirname "$0")/../VERSION")"
+SCRIPT
+  chmod +x "$install_path/bin/$TOOL_NAME"
+}
